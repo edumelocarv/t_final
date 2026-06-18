@@ -35,9 +35,7 @@ analise semantica.
 """
 
 
-# ---------------------------------------------------------------------------
 # No da arvore sintatica
-# ---------------------------------------------------------------------------
 
 class No:
     """Um no generico da arvore. `tipo` e o rotulo; `valor` aparece nas folhas."""
@@ -57,9 +55,7 @@ class ErroSintatico(Exception):
         super().__init__(f"Erro sintatico na linha {linha}: {mensagem}")
 
 
-# ---------------------------------------------------------------------------
 # Parser
-# ---------------------------------------------------------------------------
 
 class Parser:
     def __init__(self, tokens):
@@ -454,9 +450,7 @@ class Parser:
             tok.linha, f"expressao invalida: nao esperava '{self._desc(tok)}'")
 
 
-# ---------------------------------------------------------------------------
 # Impressao da arvore (para o modo --ast)
-# ---------------------------------------------------------------------------
 
 def imprimir_arvore(no):
     rotulo = no.tipo if no.valor is None else f"{no.tipo} ({no.valor})"
