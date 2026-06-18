@@ -89,3 +89,15 @@ Próxima etapa (versão final do front-end, 25/jun):
 
 - Declaração de **classes e objetos**.
 - **Análise semântica** (tipos, escopos, declaração antes do uso, etc.).
+
+## 6. Extensões desta branch (`feat/testes-monitor`)
+
+Esta branch habilita dois recursos usados nos testes de `tests/` que vão **além
+do que a especificação escreve** (a branch `main` segue a spec à risca):
+
+- **Vetores multidimensionais (matrizes):** `let int[3][3] matriz;` e
+  `matriz[i][j]`. A spec define apenas vetores de uma dimensão.
+- **Atribuição composta lógica:** `&&=` e `||=` (a spec exemplifica apenas as
+  aritméticas `+=`, `-=`, ...).
+
+Com isso, os três arquivos de `tests/` compilam com sucesso.

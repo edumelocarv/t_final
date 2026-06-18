@@ -8,9 +8,7 @@ a LINHA em que apareceu, para podermos indicar onde ocorreu um erro.
 """
 
 
-# ---------------------------------------------------------------------------
 # Conjuntos de palavras que o lexer precisa reconhecer
-# ---------------------------------------------------------------------------
 
 # Palavras reservadas: nao podem ser usadas como nome de variavel/funcao.
 PALAVRAS_RESERVADAS = {
@@ -25,7 +23,7 @@ TIPOS = {"int", "real", "str", "bool"}
 # "==" seja reconhecido antes de "=", "**" antes de "*", e assim por diante.
 OPERADORES = [
     # 3 caracteres
-    "**=",
+    "**=", "&&=", "||=",
     # 2 caracteres
     "==", "!=", ">=", "<=", "&&", "||", "++", "--", "**",
     "+=", "-=", "*=", "/=", "%=",
@@ -56,10 +54,8 @@ class ErroLexico(Exception):
         super().__init__(f"Erro lexico na linha {linha}: {mensagem}")
 
 
-# ---------------------------------------------------------------------------
-# Funcao principal do lexer
-# ---------------------------------------------------------------------------
 
+# Funcao principal do lexer
 def tokenizar(codigo):
     """Recebe o codigo-fonte (string) e devolve a lista de tokens."""
     tokens = []
@@ -124,9 +120,7 @@ def tokenizar(codigo):
     return tokens
 
 
-# ---------------------------------------------------------------------------
 # Auxiliares
-# ---------------------------------------------------------------------------
 
 def _classificar_palavra(palavra):
     """Decide a categoria de uma sequencia de letras/digitos/underscore."""
