@@ -450,9 +450,7 @@ class Parser:
             tok.linha, f"expressao invalida: nao esperava '{self._desc(tok)}'")
 
 
-# ---------------------------------------------------------------------------
 # Impressao da arvore (para o modo --ast)
-# ---------------------------------------------------------------------------
 
 def imprimir_arvore(no):
     rotulo = no.tipo if no.valor is None else f"{no.tipo} ({no.valor})"
