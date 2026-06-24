@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 jssc -- Compilador da linguagem JSS (Java Script Simplificado).
-Front-end (etapa de analise): analise lexica e sintatica.
+Front-end completo: analise lexica, sintatica e semantica.
 
 Uso:
     python3 jssc.py programa.jss            # le de um arquivo
@@ -11,21 +11,20 @@ Uso:
 
 Saida:
     "Compilacao concluida com sucesso." quando o programa e valido;
-    "Erro lexico/sintatico na linha N: ..." quando ha algum problema.
+    "Erro lexico/sintatico/semantico na linha N: ..." quando ha algum problema.
 """
 
 import sys
 
 from lexer import tokenizar, ErroLexico
 from jss_parser import Parser, ErroSintatico, imprimir_arvore
+from semantic import Analisador, ErroSemantico
 
 
 def ler_codigo(arquivos):
-    """Le o programa de um arquivo (se informado) ou da entrada padrao."""
     if arquivos:
-        caminho = arquivos[0]
         try:
-            with open(caminho, "r", encoding="utf-8") as f:
+            with open(arquivos[0], "r", encoding="utf-8") as f:
                 return f.read()
         except OSError as e:
             print(f"Nao foi possivel abrir o arquivo: {e}")
@@ -42,20 +41,23 @@ def main():
     codigo = ler_codigo(arquivos)
 
     try:
-        # 1) Analise lexica: texto -> lista de tokens
+        # 1) analise lexica: texto -> tokens
         tokens = tokenizar(codigo)
         if mostrar_tokens:
-            print("=== TOKENS (saida do analisador lexico) ===")
+            print("=== TOKENS (analisador lexico) ===")
             for t in tokens:
                 print(f"  linha {t.linha:>3} | {t.tipo:<7} | {t.valor!r}")
             print()
 
-        # 2) Analise sintatica: tokens -> arvore sintatica
+        # 2) analise sintatica: tokens -> arvore sintatica
         arvore = Parser(tokens).parse_programa()
         if mostrar_ast:
-            print("=== ARVORE SINTATICA (saida do analisador sintatico) ===")
+            print("=== ARVORE SINTATICA (analisador sintatico) ===")
             imprimir_arvore(arvore)
             print()
+
+        # 3) analise semantica: verifica tipos, escopos, etc.
+        Analisador(arvore).analisar()
 
         print("Compilacao concluida com sucesso.")
         sys.exit(0)
@@ -65,6 +67,9 @@ def main():
         sys.exit(1)
     except ErroSintatico as e:
         print(f"Erro sintatico na linha {e.linha}: {e.mensagem}")
+        sys.exit(1)
+    except ErroSemantico as e:
+        print(f"Erro semantico na linha {e.linha}: {e.mensagem}")
         sys.exit(1)
 
 
