@@ -62,7 +62,7 @@ class Parser:
         self.tokens = tokens
         self.pos = 0
 
-    # ---- utilitarios de navegacao -----------------------------------------
+    # utilitarios de navegacao 
 
     def atual(self):
         return self.tokens[self.pos]
@@ -99,7 +99,7 @@ class Parser:
     def _desc(tok):
         return "fim do arquivo" if tok.tipo == "EOF" else tok.valor
 
-    # ---- programa e declaracoes -------------------------------------------
+    # programa e declaracoes 
 
     def parse_programa(self):
         decls = []
@@ -181,10 +181,10 @@ class Parser:
     def parse_var_decl(self, exigir_ponto_virgula=True):
         palavra = self.avancar()            # 'let' ou 'const'
         tipo = self.parse_tipo()
-        dim = None
-        if self.checar_valor("["):          # dimensao do vetor: tipo [ expr ]
+        dims = []
+        while self.checar_valor("["):       # dimensoes: tipo[e] (1D) ou tipo[e][e] (matriz)
             self.avancar()
-            dim = self.parse_expressao()
+            dims.append(self.parse_expressao())
             self.consumir_valor("]", "']' para fechar a dimensao do vetor")
         itens = []
         while True:
@@ -201,12 +201,12 @@ class Parser:
         if exigir_ponto_virgula:
             self.consumir_valor(";", "';' no fim da declaracao")
         filhos = [No("Tipo", valor=tipo)]
-        if dim is not None:
-            filhos.append(No("Dimensao", dim))
+        for d in dims:
+            filhos.append(No("Dimensao", d))
         filhos.extend(itens)
         return No("Declaracao", *filhos, valor=palavra.valor)
 
-    # ---- comandos ---------------------------------------------------------
+    # comandos
 
     def parse_comando(self):
         if self.checar_valor("let", "const"):
@@ -300,14 +300,14 @@ class Parser:
         self.consumir_valor(";", "';' apos o return")
         return No("Return", expr)
 
-    # ---- expressoes (em ordem de precedencia) -----------------------------
+    # expressoes (em ordem de precedencia)
 
     def parse_expressao(self):
         return self.parse_atribuicao()
 
     def parse_atribuicao(self):
         esq = self.parse_ou()
-        if self.checar_valor("=", "+=", "-=", "*=", "/=", "%="):
+        if self.checar_valor("=", "+=", "-=", "*=", "/=", "%=", "&&=", "||="):
             op = self.avancar().valor
             direita = self.parse_atribuicao()      # associativo a direita
             return No("Atrib", esq, direita, valor=op)

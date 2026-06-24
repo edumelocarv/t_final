@@ -23,7 +23,7 @@ TIPOS = {"int", "real", "str", "bool"}
 # "==" seja reconhecido antes de "=", "**" antes de "*", e assim por diante.
 OPERADORES = [
     # 3 caracteres
-    "**=",
+    "**=", "&&=", "||=",
     # 2 caracteres
     "==", "!=", ">=", "<=", "&&", "||", "++", "--", "**",
     "+=", "-=", "*=", "/=", "%=",
@@ -55,7 +55,6 @@ class ErroLexico(Exception):
 
 
 # Funcao principal do lexer
-
 def tokenizar(codigo):
     """Recebe o codigo-fonte (string) e devolve a lista de tokens."""
     tokens = []
