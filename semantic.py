@@ -43,13 +43,18 @@ class Analisador:
     def analisar(self):
         self.escopos.append({})      # escopo global
         self.coletar()
-        for decl in self.arvore.filhos:
-            if decl.tipo == "Funcao":
-                self.analisar_funcao(decl)
-            elif decl.tipo == "Classe":
-                self.analisar_classe(decl)
-            elif decl.tipo == "Declaracao":
-                self.checar_inicializadores(decl)
+        self.funcao_atual = None
+        for item in self.arvore.filhos:
+            if item.tipo == "Funcao":
+                self.analisar_funcao(item)
+            elif item.tipo == "Classe":
+                self.analisar_classe(item)
+            elif item.tipo == "Declaracao":
+                self.checar_inicializadores(item)
+            else:
+                # comando solto no topo (estilo script), no escopo global
+                self.funcao_atual = None
+                self.analisar_comando(item)
         self.escopos.pop()
 
     # erros e tipos
@@ -93,8 +98,6 @@ class Analisador:
     def declarar(self, nome, tipo, categoria, linha):
         if nome in self.escopos[-1]:
             self.erro(linha, f"'{nome}' ja foi declarado neste escopo")
-        if len(self.escopos) > 1 and nome in self.funcoes:
-            self.erro(linha, f"o nome '{nome}' ja pertence a uma funcao")
         self.escopos[-1][nome] = {"tipo": tipo, "categoria": categoria, "linha": linha}
 
     def buscar(self, nome):
@@ -189,8 +192,6 @@ class Analisador:
     def analisar_funcao(self, decl):
         ret = decl.filhos[0].valor
         self.validar_tipo(ret, decl.linha)
-        if self.eh_array(ret):
-            self.erro(decl.linha, "o tipo de retorno de uma funcao nao pode ser vetor")
         if decl.valor == "main" and decl.filhos[1].filhos:
             self.erro(decl.linha, "a funcao main nao pode ter parametros")
         self.classe_atual = None
@@ -207,8 +208,6 @@ class Analisador:
             elif m.tipo == "Metodo":
                 ret = m.filhos[0].valor
                 self.validar_tipo(ret, m.linha)
-                if self.eh_array(ret):
-                    self.erro(m.linha, "o tipo de retorno de um metodo nao pode ser vetor")
                 self.analisar_subrotina(m.filhos[1], m.filhos[2], ret, m.linha)
         self.classe_atual = None
 
@@ -338,6 +337,8 @@ class Analisador:
         self.escopos.pop()
 
     def analisar_return(self, no):
+        if self.funcao_atual is None:
+            self.erro(no.linha, "'return' so pode ser usado dentro de uma funcao")
         esperado = self.funcao_atual["ret"]
         if no.filhos:
             t = self.tipo_de(no.filhos[0])

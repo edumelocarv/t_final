@@ -6,7 +6,7 @@ gramaticalmente valido, usando descida recursiva: cada regra da gramatica e
 uma funcao, e elas se chamam recursivamente. Como subproduto constroi a
 arvore sintatica (AST), que e usada pela analise semantica e pelo back-end.
 
-Cada no guarda a linha de origem para que erros possam apontar onde ocorreram.
+Cada nó guarda a linha de origem para que erros possam apontar onde ocorreram.
 """
 
 
@@ -42,15 +42,17 @@ class Parser:
         return tok
 
     def checar_valor(self, *valores):
+        # so casa operadores/pontuacao e palavras-chave; nunca um literal
+        # (ex.: a string "!" nao pode ser confundida com o operador !)
         tok = self.atual()
-        return tok.tipo != "EOF" and tok.valor in valores
+        return tok.tipo in ("OP", "PALAVRA", "TIPO") and tok.valor in valores
 
     def checar_tipo(self, *tipos):
         return self.atual().tipo in tipos
 
     def consumir_valor(self, valor, oque=None):
         tok = self.atual()
-        if tok.tipo != "EOF" and tok.valor == valor:
+        if tok.tipo in ("OP", "PALAVRA", "TIPO") and tok.valor == valor:
             return self.avancar()
         esperado = oque or f"'{valor}'"
         raise ErroSintatico(tok.linha,
@@ -70,23 +72,17 @@ class Parser:
     # programa e declaracoes
 
     def parse_programa(self):
-        decls = []
+        # No topo aceitamos declaracoes (function/class) e tambem comandos soltos
+        # (estilo script). A funcao main e facultativa.
+        itens = []
         while not self.checar_tipo("EOF"):
-            decls.append(self.parse_declaracao())
-        return No("Programa", *decls)
-
-    def parse_declaracao(self):
-        if self.checar_valor("function"):
-            return self.parse_funcao()
-        if self.checar_valor("class"):
-            return self.parse_classe()
-        if self.checar_valor("let", "const"):
-            return self.parse_var_decl()
-        tok = self.atual()
-        raise ErroSintatico(
-            tok.linha,
-            "esperava uma declaracao ('function', 'class', 'let' ou 'const'), "
-            f"mas encontrei '{self._desc(tok)}'")
+            if self.checar_valor("function"):
+                itens.append(self.parse_funcao())
+            elif self.checar_valor("class"):
+                itens.append(self.parse_classe())
+            else:
+                itens.append(self.parse_comando())
+        return No("Programa", *itens)
 
     def parse_funcao(self):
         self.consumir_valor("function")
@@ -106,7 +102,7 @@ class Parser:
         if self.checar_valor("void"):
             self.avancar()
             return "void"
-        return self.parse_tipo()
+        return self.parse_tipo_com_dims()
 
     def parse_tipo(self):
         tok = self.atual()
@@ -121,19 +117,26 @@ class Parser:
             "esperava um tipo (int, real, str, bool ou nome de classe), "
             f"mas encontrei '{self._desc(tok)}'")
 
+    def parse_tipo_com_dims(self):
+        # tipo com dimensoes opcionais: int, int[], int[5], int[3][3].
+        # O tamanho entre colchetes nao afeta o tipo (so o numero de dimensoes).
+        tipo = self.parse_tipo()
+        while self.checar_valor("["):
+            self.avancar()
+            if not self.checar_valor("]"):
+                self.parse_expressao()
+            self.consumir_valor("]", "']' na dimensao do tipo")
+            tipo += "[]"
+        return tipo
+
     def parse_parametros(self):
         params = []
         if self.checar_valor(")"):
             return params
         while True:
-            tipo = self.parse_tipo()
-            sufixo = ""
-            if self.checar_valor("["):          # parametro vetor: int[] v
-                self.avancar()
-                self.consumir_valor("]", "']' na declaracao de vetor do parametro")
-                sufixo = "[]"
+            tipo = self.parse_tipo_com_dims()   # aceita int, int[], int[5], int[3][3]
             nome = self.consumir_tipo("ID", "o nome do parametro")
-            params.append(No("Param", valor=f"{tipo}{sufixo} {nome.valor}", linha=nome.linha))
+            params.append(No("Param", valor=f"{tipo} {nome.valor}", linha=nome.linha))
             if self.checar_valor(","):
                 self.avancar()
                 continue
@@ -189,10 +192,10 @@ class Parser:
         return No("Classe", *membros, valor=nome.valor, linha=nome.linha)
 
     def parse_membro_classe(self):
-        # atributo:   tipo [dim]* id ;
+        # atributo:   tipo id ;                       (tipo pode ter dimensoes)
         # construtor: <nome_classe> constructor ( params ) bloco
-        # metodo:     tipo id ( params ) bloco
-        tipo = self.parse_tipo()
+        # metodo:     tipo_retorno id ( params ) bloco   (tipo_retorno pode ser void)
+        tipo = self.parse_tipo_retorno()
         if self.checar_valor("constructor"):
             ctok = self.avancar()
             self.consumir_valor("(", "'(' apos constructor")
@@ -201,11 +204,6 @@ class Parser:
             corpo = self.parse_bloco()
             return No("Construtor", No("Params", *params), corpo,
                       valor=tipo, linha=ctok.linha)
-        dims = []
-        while self.checar_valor("["):
-            self.avancar()
-            dims.append(self.parse_expressao())
-            self.consumir_valor("]", "']' na dimensao do atributo")
         nome = self.consumir_tipo("ID", "o nome do atributo ou metodo")
         if self.checar_valor("("):          # metodo
             self.avancar()
@@ -215,10 +213,7 @@ class Parser:
             return No("Metodo", No("Retorno", valor=tipo), No("Params", *params),
                       corpo, valor=nome.valor, linha=nome.linha)
         self.consumir_valor(";", "';' apos a declaracao do atributo")
-        filhos = [No("Tipo", valor=tipo)]
-        for d in dims:
-            filhos.append(No("Dimensao", d))
-        return No("Atributo", *filhos, valor=nome.valor, linha=nome.linha)
+        return No("Atributo", No("Tipo", valor=tipo), valor=nome.valor, linha=nome.linha)
 
     # comandos
 

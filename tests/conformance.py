@@ -82,6 +82,14 @@ CASOS = [
      'let int x=1; function void f(int x){ console.log(x); } function void main(){ f(2); }'),
     ("underscore id", "ok",
      'function void main(){ let int _x=1; console.log(_x); }'),
+    ("programa estilo script (sem main)", "ok",
+     'let int x = 10; console.log(x); let int[3] v; v[0]=1; for(let int i=0;i<3;i=i+1){ console.log(v[i]); }'),
+    ("retorno de vetor", "ok",
+     'function int[3] cria(){ let int[3] v; return v; } let int[3] a = cria();'),
+    ("parametro vetor com tamanho", "ok",
+     'function int primeiro(int[5] a){ return a[0]; }'),
+    ("metodo void em classe", "ok",
+     'class C{ int x; C constructor(){ this.x=0; } void mostra(){ console.log(this.x); } }'),
 
     # ---------- ERROS ----------
     ("palavra reservada como id", "sin",
@@ -118,6 +126,8 @@ CASOS = [
      'function int f(){ let int x=1; }'),
     ("break fora de laco", "sem",
      'function void main(){ break; }'),
+    ("return fora de funcao", "sem",
+     'return 1;'),
     ("cond if nao-bool", "sem",
      'function void main(){ if(5){ } }'),
     ("indice nao-int", "sem",
