@@ -194,7 +194,7 @@ class Analisador:
         if decl.valor == "main" and decl.filhos[1].filhos:
             self.erro(decl.linha, "a funcao main nao pode ter parametros")
         self.classe_atual = None
-        self.analisar_subrotina(decl.filhos[1], decl.filhos[2], ret)
+        self.analisar_subrotina(decl.filhos[1], decl.filhos[2], ret, decl.linha)
 
     def analisar_classe(self, decl):
         nome = decl.valor
@@ -203,25 +203,33 @@ class Analisador:
             self.validar_tipo(t, decl.linha)
         for m in decl.filhos:
             if m.tipo == "Construtor":
-                self.analisar_subrotina(m.filhos[0], m.filhos[1], "void")
+                self.analisar_subrotina(m.filhos[0], m.filhos[1], "void", m.linha)
             elif m.tipo == "Metodo":
                 ret = m.filhos[0].valor
                 self.validar_tipo(ret, m.linha)
                 if self.eh_array(ret):
                     self.erro(m.linha, "o tipo de retorno de um metodo nao pode ser vetor")
-                self.analisar_subrotina(m.filhos[1], m.filhos[2], ret)
+                self.analisar_subrotina(m.filhos[1], m.filhos[2], ret, m.linha)
         self.classe_atual = None
 
-    def analisar_subrotina(self, params_no, corpo, ret):
+    def analisar_subrotina(self, params_no, corpo, ret, linha):
         anterior = self.funcao_atual
         self.funcao_atual = {"ret": ret}
         self.escopos.append({})
-        for (tipo, nome, linha) in self.extrair_params(params_no):
-            self.validar_tipo(tipo, linha)
-            self.declarar(nome, tipo, "param", linha)
+        for (tipo, nome, plinha) in self.extrair_params(params_no):
+            self.validar_tipo(tipo, plinha)
+            self.declarar(nome, tipo, "param", plinha)
         self.analisar_bloco(corpo, novo_escopo=False)
         self.escopos.pop()
         self.funcao_atual = anterior
+        # funcao/metodo com retorno (nao-void) precisa ter um 'return' com valor
+        if ret != "void" and not self.tem_return_com_valor(corpo):
+            self.erro(linha, f"uma funcao com retorno '{ret}' precisa ter um 'return' com valor")
+
+    def tem_return_com_valor(self, no):
+        if no.tipo == "Return":
+            return len(no.filhos) > 0
+        return any(self.tem_return_com_valor(f) for f in no.filhos)
 
     def analisar_bloco(self, bloco, novo_escopo=True):
         if novo_escopo:
