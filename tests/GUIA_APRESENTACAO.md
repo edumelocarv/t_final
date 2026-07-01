@@ -10,8 +10,8 @@ Marcadores:
 - 🗣️ **Diga** = o que falar.
 - 💻 **Rode** = comando no terminal (mostra a saída do código).
 
-> Antes de começar: terminal aberto na pasta do projeto e o editor com os 4
-> arquivos (`lexer.py`, `jss_parser.py`, `semantic.py`, `jssc.py`).
+> Antes de começar: terminal aberto na pasta do projeto e o editor com os 5
+> arquivos (`lexer.py`, `jss_parser.py`, `semantic.py`, `codegen.py`, `jssc.py`).
 
 ---
 
@@ -230,31 +230,77 @@ recusados na fase certa."
 ```bash
 python3 tests/conformance.py
 ```
-→ `TOTAL: 59 casos, 0 falha(s)`.
+→ `TOTAL: 61 casos, 0 falha(s)`.
 
 🗣️ Diga: "E também rodo os arquivos de teste que o senhor enviou."
 💻 Rode os testes do professor:
 ```bash
 for f in testes/*.jss; do echo "== $f =="; python3 jssc.py "$f"; done
 ```
-→ `1` a `6` compilam com sucesso; `7` e `8` são arquivos de erro e falham,
-apontando a linha.
+→ `1` a `5` compilam; `6`, `7` e `8` falham apontando a linha — o `6` porque
+retorna um vetor (a v3 proíbe), e o `7`/`8` são arquivos de erro.
 
 ---
 
-## PARTE 6 — Encerramento
+## PARTE 6 — Back-end: geração de código · 📂 `codegen.py`
 
 🗣️ Diga:
-> "Então: três análises, cada uma num arquivo; a AST como estrutura central, que a
-> semântica percorre e que o back-end vai reaproveitar; execução por linha de
-> comando reportando os erros das três fases com a linha; e duas baterias de
-> testes (a minha e a do senhor) comprovando a conformidade. O próximo passo é o
-> back-end, traduzindo essa árvore para código intermediário."
+> "O back-end percorre a **mesma AST** e gera código intermediário **JASMIN** —
+> o assembly da JVM. A JVM é uma **máquina de pilha**, então cada expressão vira
+> 'empilha operandos, opera'. O mapeamento JSS → JVM é quase 1:1: `int` → `int`,
+> `str` → `String`, classe JSS → classe da JVM, vetor → array."
+
+👉 Aponte a função `descritor` ([codegen.py:23](codegen.py:23)) — traduz um tipo
+JSS para o descritor da JVM (`int`→`I`, `real`→`D`, `str`→`Ljava/lang/String;`).
+
+👉 Aponte `gerar` ([codegen.py:138](codegen.py:138)):
+> "Monta a classe principal `Programa`: funções JSS viram métodos `static`,
+> variáveis globais viram campos `static`, e os comandos do topo vão para o
+> `main` da JVM (`_gerar_entrada`, [codegen.py:269](codegen.py:269))."
+
+👉 Aponte `gerar_expr` ([codegen.py:497](codegen.py:497)) — o coração: recebe um nó
+e emite as instruções, devolvendo o tipo. Ex.: `_gerar_opbin`
+([codegen.py:560](codegen.py:560)) para `a + b` emite `iadd`/`dadd`; classes viram
+arquivos `.class` próprios em `_gerar_classe` ([codegen.py:190](codegen.py:190)).
+
+🗣️ Diga (o pulo do gato de explicar): mostre a saída JASMIN de um trecho simples.
+💻 Rode:
+```bash
+printf 'console.log(2 + 3);' | python3 jssc.py --jvm && cat build/Programa.j
+```
+🗣️ Aponte no `.j`: `iconst_2`, `iconst_3`, `iadd` — é exatamente "empilha 2,
+empilha 3, soma".
+
+👉 Aponte `main` no `jssc.py` ([jssc.py:35](jssc.py:35)) e a função `compilar_jvm`:
+gera o `.j`, monta com `tools/jasmin.jar` (produz `Programa.class`) e executa
+com `java`.
+
+💻 **A prova final — compilar e EXECUTAR** programas de verdade:
+```bash
+echo 5 | python3 jssc.py exemplos/ok1_fatorial.jss --run   # recursao: Fatorial: 120
+python3 jssc.py testes/1_basics.jss --run                  # vetores e matriz
+python3 jssc.py testes/5_classes.jss --run                 # classes e objetos
+python3 jssc.py testes/2_operators.jss --run               # todos os operadores
+```
+
+---
+
+## PARTE 7 — Encerramento
+
+🗣️ Diga:
+> "Resumindo o compilador completo: três análises no front-end (léxica, sintática,
+> semântica) sobre a AST, que é a estrutura central; e o back-end, que percorre
+> essa mesma AST e gera código JASMIN, montado num `.class` e **executado** de
+> verdade na JVM. Roda por linha de comando, reporta os erros das três fases com a
+> linha, e passa nas duas baterias de teste (a minha e a do senhor). O compilador
+> está completo, do texto-fonte até o programa rodando."
 
 ---
 
 ## Checklist antes de apresentar
-- [ ] Editor aberto com os 4 arquivos; terminal na pasta do projeto.
+- [ ] Editor aberto com os 5 arquivos; terminal na pasta do projeto.
+- [ ] `python3 --version` e `java -version` funcionam.
 - [ ] Rodei `--tokens` e `--ast` em um exemplo (Partes 1 e 2).
 - [ ] Rodei os `erro_*`, `tests/conformance.py` e os `testes/` do professor.
-- [ ] Reli as Partes 1 e 2 (são as que o professor mais aprofunda).
+- [ ] Rodei `--run` em ok1 (fatorial), test1 (vetores) e test5 (classes).
+- [ ] Reli as Partes 1, 2 e 6 (as que o professor mais aprofunda).
