@@ -192,10 +192,19 @@ class Parser:
         return No("Classe", *membros, valor=nome.valor, linha=nome.linha)
 
     def parse_membro_classe(self):
-        # atributo:   tipo id ;                       (tipo pode ter dimensoes)
+        # atributo:   tipo [dim]* id ;
         # construtor: <nome_classe> constructor ( params ) bloco
-        # metodo:     tipo_retorno id ( params ) bloco   (tipo_retorno pode ser void)
-        tipo = self.parse_tipo_retorno()
+        # metodo:     (void | tipo) id ( params ) bloco
+        if self.checar_valor("void"):
+            self.avancar()
+            nome = self.consumir_tipo("ID", "o nome do metodo")
+            self.consumir_valor("(", "'(' apos o nome do metodo")
+            params = self.parse_parametros()
+            self.consumir_valor(")", "')' apos os parametros do metodo")
+            corpo = self.parse_bloco()
+            return No("Metodo", No("Retorno", valor="void"), No("Params", *params),
+                      corpo, valor=nome.valor, linha=nome.linha)
+        tipo = self.parse_tipo()
         if self.checar_valor("constructor"):
             ctok = self.avancar()
             self.consumir_valor("(", "'(' apos constructor")
@@ -204,16 +213,23 @@ class Parser:
             corpo = self.parse_bloco()
             return No("Construtor", No("Params", *params), corpo,
                       valor=tipo, linha=ctok.linha)
+        dims = []
+        while self.checar_valor("["):       # atributo vetor: int[3] x  /  int[3][3] m
+            self.avancar()
+            dims.append(self.parse_expressao())
+            self.consumir_valor("]", "']' na dimensao do atributo")
         nome = self.consumir_tipo("ID", "o nome do atributo ou metodo")
         if self.checar_valor("("):          # metodo
             self.avancar()
             params = self.parse_parametros()
             self.consumir_valor(")", "')' apos os parametros do metodo")
             corpo = self.parse_bloco()
-            return No("Metodo", No("Retorno", valor=tipo), No("Params", *params),
-                      corpo, valor=nome.valor, linha=nome.linha)
+            return No("Metodo", No("Retorno", valor=tipo + "[]" * len(dims)),
+                      No("Params", *params), corpo, valor=nome.valor, linha=nome.linha)
         self.consumir_valor(";", "';' apos a declaracao do atributo")
-        return No("Atributo", No("Tipo", valor=tipo), valor=nome.valor, linha=nome.linha)
+        filhos = [No("Tipo", valor=tipo + "[]" * len(dims))]
+        filhos += [No("Dimensao", d) for d in dims]
+        return No("Atributo", *filhos, valor=nome.valor, linha=nome.linha)
 
     # comandos
 

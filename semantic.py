@@ -168,8 +168,7 @@ class Analisador:
                     self.erro(m.linha, "os atributos devem vir antes dos metodos")
                 if m.valor in info["atributos"]:
                     self.erro(m.linha, f"atributo '{m.valor}' duplicado")
-                t = m.filhos[0].valor + "[]" * sum(1 for x in m.filhos if x.tipo == "Dimensao")
-                info["atributos"][m.valor] = t
+                info["atributos"][m.valor] = m.filhos[0].valor
             elif m.tipo == "Construtor":
                 viu_metodo = True
                 if info["construtor"] is not None:
@@ -192,6 +191,8 @@ class Analisador:
     def analisar_funcao(self, decl):
         ret = decl.filhos[0].valor
         self.validar_tipo(ret, decl.linha)
+        if self.eh_array(ret):     # v3: retorno nao pode ser vetor (mas pode ser objeto)
+            self.erro(decl.linha, "o tipo de retorno de uma funcao nao pode ser vetor")
         if decl.valor == "main" and decl.filhos[1].filhos:
             self.erro(decl.linha, "a funcao main nao pode ter parametros")
         self.classe_atual = None
@@ -208,6 +209,8 @@ class Analisador:
             elif m.tipo == "Metodo":
                 ret = m.filhos[0].valor
                 self.validar_tipo(ret, m.linha)
+                if self.eh_array(ret):     # v3: retorno nao pode ser vetor
+                    self.erro(m.linha, "o tipo de retorno de um metodo nao pode ser vetor")
                 self.analisar_subrotina(m.filhos[1], m.filhos[2], ret, m.linha)
         self.classe_atual = None
 
@@ -361,6 +364,12 @@ class Analisador:
     # tipagem de expressoes
 
     def tipo_de(self, no):
+        # calcula o tipo e o guarda no proprio no (no.t), para o back-end reusar
+        resultado = self._tipo_de(no)
+        no.t = resultado
+        return resultado
+
+    def _tipo_de(self, no):
         t = no.tipo
         if t == "Int":
             return "int"
