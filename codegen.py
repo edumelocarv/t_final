@@ -73,9 +73,9 @@ class GeradorJasmin:
         self.breaks = []         # pilha de rotulos de saida de laco
         self.ret_atual = "void"
 
-    # ------------------------------------------------------------------ #
+    
     # utilidades
-    # ------------------------------------------------------------------ #
+    
 
     def emitir(self, instr):
         self.corpo.append("    " + instr)
@@ -131,9 +131,7 @@ class GeradorJasmin:
                 nd += 1
         return base + "[]" * nd
 
-    # ------------------------------------------------------------------ #
-    # topo: monta a classe principal
-    # ------------------------------------------------------------------ #
+    # topo: monta a classe principal    
 
     def gerar(self):
         for item in self.arvore.filhos:
@@ -311,9 +309,8 @@ class GeradorJasmin:
             self._push_default(ret)
             self.emitir(self._xreturn(ret))
 
-    # ------------------------------------------------------------------ #
+    
     # comandos
-    # ------------------------------------------------------------------ #
 
     def _gerar_bloco(self, bloco, novo_escopo=True):
         if novo_escopo:
@@ -490,9 +487,9 @@ class GeradorJasmin:
         else:
             self.emitir("return")
 
-    # ------------------------------------------------------------------ #
+    
     # expressoes (devolvem o tipo JSS do valor deixado na pilha)
-    # ------------------------------------------------------------------ #
+    
 
     def gerar_expr(self, no):
         t = no.tipo
@@ -882,9 +879,9 @@ class GeradorJasmin:
             self._store_var(a.valor)
         return "void"
 
-    # ------------------------------------------------------------------ #
+    
     # helpers de baixo nivel
-    # ------------------------------------------------------------------ #
+    
 
     def _load_var(self, nome):
         loc = self.buscar_local(nome)
